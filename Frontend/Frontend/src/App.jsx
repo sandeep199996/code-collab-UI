@@ -3,6 +3,7 @@ import UserList from './components/UserList'
 import Login from './components/Login'
 import Register from './components/Register'
 import Chat from './components/Chat'
+import CodeWorkspace from './components/CodeWorkspace'
 
 
 import './App.css'
@@ -25,7 +26,8 @@ const [showRegister, setShowRegister] = useState(false);
                  </div>
         <UserList />
         <hr style={{ margin: '30px 0' }} />
-        <Chat /> { /* only show the chat if they are logged in, since we need their email for the username */ }
+        <CodeWorkspace />
+        <Chat /> { /* to only show the chat if they are logged in, since we need their email for the username */ }
         </>
         ) : (
             showRegister ? (
