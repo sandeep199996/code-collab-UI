@@ -13,13 +13,13 @@ const VideoCall = () => {
     const token = localStorage.getItem('mentor_jwt');
     const userEmail = token ? JSON.parse(atob(token.split('.')[1])).sub : 'Anonymous';
 
-    // Standard Google STUN servers to help browsers find each other's IP addresses
+
     const rtcConfig = {
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     };
 
     useEffect(() => {
-        // 1. Connect to our Spring Boot WebSocket for Signaling
+        // 1. Connecting Spring Boot WebSocket for Signaling
         const socket = new SockJS('http://localhost:8080/ws');
         const client = new Client({
             webSocketFactory: () => socket,
@@ -123,8 +123,8 @@ try {
     };
 
     return (
-        <div style={{ marginTop: '20px', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', backgroundColor: '#f0f4f8' }}>
-            <h2>Mentorship Video Call</h2>
+        <div style={{ marginTop: '20px', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', backgroundColor: '#022D36' }}>
+            <h2 align='center'>Mentorship Video Call</h2>
 
             <div style={{ display: 'flex', gap: '20px', marginBottom: '15px' }}>
                 <div style={{ flex: 1, backgroundColor: 'black', borderRadius: '8px', overflow: 'hidden' }}>
@@ -132,7 +132,7 @@ try {
                     <video ref={remoteVideoRef} autoPlay playsInline style={{ width: '100%', height: '300px', objectFit: 'cover' }} />
                 </div>
                 <div style={{ width: '200px', backgroundColor: 'black', borderRadius: '8px', overflow: 'hidden' }}>
-                    {/* Your video (Small) */}
+                    {/* own video (Small) */}
                     <video ref={localVideoRef} autoPlay playsInline muted style={{ width: '100%', height: '150px', objectFit: 'cover' }} />
                 </div>
             </div>

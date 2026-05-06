@@ -28,8 +28,8 @@ const Login = ({ onLoginSuccess }) => {
     };
 
     return (
-        <div style={{ maxWidth: '300px', margin: '50px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
-            <h2>Login</h2>
+        <div style={{ maxWidth: '300px', margin: '100px auto', padding: '30px', border: '2px solid #ccc', borderRadius: '8px' }}>
+            <h2 align='center'>Login</h2>
             {error && <p style={{ color: 'red' }}>{error}</p>}
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <input
@@ -46,7 +46,7 @@ const Login = ({ onLoginSuccess }) => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                 />
-                <button type="submit">Log In</button>
+                <button type="submit" >Log In</button>
             </form>
         </div>
     );

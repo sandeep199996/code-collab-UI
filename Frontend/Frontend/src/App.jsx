@@ -10,21 +10,37 @@ import VideoCall from './components/VideoCall'
 import './App.css'
 
 function App() {
-// We check the backpack immediately. If a token is there, they are logged in!
+// To check the backpack immediately. If a token is there, they are logged in!
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('mentor_jwt'));
 const [showRegister, setShowRegister] = useState(false);
+  const [isLogoutHovered, setIsLogoutHovered] = useState(false);
   const handleLogout = () => {
     localStorage.removeItem('mentor_jwt'); // Empty the backpack
     setIsLoggedIn(false);
   };
 
   return (
-      <div><h1 style={{ textAlign: 'center', margin: '20px 0', fontFamily: 'Arial, sans-serif' }}>Welcome to the Mentee-Mentor Directory</h1>
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0' }}>
+          <h1 style={{ textAlign: 'center', fontFamily: 'Arial, sans-serif', color: '#7A4988', margin: 0, flex: 1 }}>Welcome to the Code-Collaboration Platform</h1>
+          {isLoggedIn && <button
+            onClick={handleLogout}
+            style={{
+              marginRight: '30px',
+              color: 'red',
+              backgroundColor: isLogoutHovered ? 'white' : 'transparent',
+              border: '1px solid red',
+              padding: '5px 10px',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={() => setIsLogoutHovered(true)}
+            onMouseLeave={() => setIsLogoutHovered(false)}
+          >
+            Log Out
+          </button>}
+        </div>
        {isLoggedIn ? (
                <>
-                 <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                   <button onClick={handleLogout}>Log Out</button>
-                 </div>
         <UserList />
         <hr style={{ margin: '30px 0' }} />
         <VideoCall />

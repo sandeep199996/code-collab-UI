@@ -21,11 +21,11 @@ const UserList = () => {
     }, []);
 return (
     <div style={{ padding: '20px' , fontFamily: 'Arial, sans-serif' }}>
-        <h2>Mentee & Mentor Directory</h2>
+        <h2 style={{ color: '#8F00FF' }}>Mentee & Mentor Directory</h2>
         {error && <p style={{ color: 'red' }}>{error}</p>}
         < div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
             {users.map(user => (
-                <div key={user.id} style={{ border: '1px solid #ccc', borderRadius: '5px', padding: '10px', width: '200px' }}>
+                <div key={user.id} style={{ border: '1px solid #ccc', borderRadius: '5px', padding: '10px', width: '350px', color: '#40E0D0' }}>
                     <h3>{user.name}</h3>
                     <p ><strong>Email:</strong> {user.email}</p>
                     <p><strong>Role:</strong> {user.role}</p>

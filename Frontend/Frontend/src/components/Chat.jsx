@@ -73,20 +73,20 @@ const Chat = () => {
     };
 
     return (
-        <div style={{ maxWidth: '600px', margin: '20px auto', border: '1px solid #ccc', borderRadius: '8px', padding: '20px' }}>
-            <h2>Live Mentorship Lounge</h2>
-            <div style={{ height: '300px', overflowY: 'scroll', border: '1px solid #eee', padding: '10px', marginBottom: '10px', backgroundColor: '#fafafa' }}>
+        <div style={{ maxWidth: '600px', margin: '20px auto', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '20px' }}>
+            <h2 align= 'center'>Live Mentorship Lounge</h2>
+            <div style={{ height: '300px', overflowY: 'scroll', border: '1px solid #eee', padding: '10px', marginBottom: '10px', backgroundColor: '#28231D' }}>
                 {!connected && <p style={{ color: 'gray', fontStyle: 'italic' }}>Connecting to live server...</p>}
 
                 {messages.map((msg, index) => (
                     <div key={index} style={{ marginBottom: '10px', textAlign: msg.sender === userEmail ? 'right' : 'left' }}>
                         {msg.type === 'JOIN' ? (
-                            <span style={{ fontSize: '12px', color: 'gray', fontStyle: 'italic' }}>{msg.sender} joined the room</span>
+                            <span style={{ fontSize: '12px', color: 'gray', fontStyle: 'italic',color: 'GREEN' }}>{msg.sender} joined the room</span>
                         ) : msg.type === 'LEAVE' ? (
-                            <span style={{ fontSize: '12px', color: 'gray', fontStyle: 'italic' }}>{msg.sender} left the room</span>
+                            <span style={{ fontSize: '12px', color: 'gray', fontStyle: 'italic' , }}>{msg.sender} left the room</span>
                         ) : (
-                            <div style={{ display: 'inline-block', backgroundColor: msg.sender === userEmail ? '#dcf8c6' : '#fff', padding: '8px 12px', borderRadius: '15px', border: '1px solid #ddd' }}>
-                                <strong style={{ display: 'block', fontSize: '11px', color: '#555' }}>{msg.sender}</strong>
+                            <div style={{ display: 'inline-block', backgroundColor: msg.sender === userEmail ? '#414A4C' : '#8A7F8D', padding: '8px 12px', borderRadius: '15px', border: '1px solid #ddd' }}>
+                                <strong style={{ display: 'block', fontSize: '11px', color: '#FFFFFF' }}>{msg.sender}</strong>
                                 <span>{msg.content}</span>
                             </div>
                         )}
@@ -100,10 +100,10 @@ const Chat = () => {
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}
                     placeholder="Type a message..."
-                    style={{ flex: 1, padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }}
+                    style={{ flex: 1, padding: '20px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#3a3a3a', color: 'white' }}
                     disabled={!connected}
                 />
-                <button type="submit" disabled={!connected}>Send</button>
+                <button type="submit" disabled={!connected} style={{ borderRadius: '8px' }} >Send</button>
             </form>
         </div>
     );
