@@ -10,13 +10,16 @@ import VideoCall from './components/VideoCall'
 import './App.css'
 
 function App() {
-// To check the backpack immediately. If a token is there, they are logged in!
+
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('mentor_jwt'));
 const [showRegister, setShowRegister] = useState(false);
   const [isLogoutHovered, setIsLogoutHovered] = useState(false);
+  // NEW: Track the active private room
+    const [activeRoomId, setActiveRoomId] = useState(null);
   const handleLogout = () => {
-    localStorage.removeItem('mentor_jwt'); // Empty the backpack
+    localStorage.removeItem('mentor_jwt'); // Clear the JWT from localStorage
     setIsLoggedIn(false);
+    setActiveRoomId(null); // Clear session on logout
   };
 
   return (
@@ -41,13 +44,14 @@ const [showRegister, setShowRegister] = useState(false);
         </div>
        {isLoggedIn ? (
                <>
-        <UserList />
+        <UserList onSessionStart={(roomId) => setActiveRoomId(roomId)}
+                                  onSessionEnd={() => setActiveRoomId(null)}/>
         <hr style={{ margin: '30px 0' }} />
         <VideoCall />
         <hr style={{ margin: '30px 0' }} />
         <CodeWorkspace />
         <hr style={{ margin: '30px 0' }} />
-        <Chat /> { /* to only show the chat if they are logged in, since we need their email for the username */ }
+        <Chat activeRoomId={activeRoomId}/> { /* to only show the chat if they are logged in, since we need their email for the username */ }
         </>
         ) : (
             showRegister ? (

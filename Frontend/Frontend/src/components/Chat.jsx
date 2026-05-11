@@ -2,20 +2,26 @@ import { useState, useEffect, useRef } from 'react';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 
-const Chat = () => {
+// Accept the activeRoomId prop from App.jsx
+const Chat = ({ activeRoomId }) => {
     const [messages, setMessages] = useState([]);
     const [messageInput, setMessageInput] = useState('');
     const [connected, setConnected] = useState(false);
 
-    // We use a ref to hold our STOMP client so it doesn't reconnect on every render
     const stompClientRef = useRef(null);
 
-    // Let's quickly decode the email from our JWT backpack to use as our Chat Username
     const token = localStorage.getItem('mentor_jwt');
     const userEmail = token ? JSON.parse(atob(token.split('.')[1])).sub : 'Anonymous';
 
     useEffect(() => {
-        // 1. Set up the connection to our Spring Boot /ws endpoint
+        // If we are not in a private session, don't even connect the chat WebSocket
+        if (!activeRoomId) {
+            setMessages([]); // Clear chat history when disconnected
+            setConnected(false);
+            if (stompClientRef.current) stompClientRef.current.deactivate();
+            return;
+        }
+
         const socket = new SockJS('http://localhost:8080/ws');
         const client = new Client({
             webSocketFactory: () => socket,
@@ -23,75 +29,57 @@ const Chat = () => {
             onConnect: () => {
                 setConnected(true);
 
-                // 2. Subscribe to the public topic to listen for messages
-                client.subscribe('/topic/public', (message) => {
+                // SUBSCRIBE TO THE PRIVATE ROOM INSTEAD OF /topic/public
+                client.subscribe(`/topic/session/${activeRoomId}`, (message) => {
                     const receivedMessage = JSON.parse(message.body);
-                    // Add the new message to our existing list of messages
                     setMessages((prevMessages) => [...prevMessages, receivedMessage]);
                 });
-
-                // 3. Announce that we joined!
-                client.publish({
-                    destination: '/app/chat.addUser',
-                    body: JSON.stringify({ sender: userEmail, type: 'JOIN' })
-                });
-            },
-            onStompError: (frame) => {
-                console.error('Broker reported error: ' + frame.headers['message']);
-                console.error('Additional details: ' + frame.body);
             }
         });
 
         client.activate();
         stompClientRef.current = client;
 
-        // Cleanup function: disconnect when the component unmounts
-        return () => {
-            if (client) {
-                client.deactivate();
-            }
-        };
-    }, [userEmail]);
+        return () => { if (client) client.deactivate(); };
+    }, [activeRoomId]); // Re-run this effect whenever the activeRoomId changes
 
     const sendMessage = (e) => {
         e.preventDefault();
         if (stompClientRef.current && messageInput.trim() !== '') {
-            const chatMessage = {
-                sender: userEmail,
-                content: messageInput,
-                type: 'CHAT'
-            };
-
-            // Push the message to the Spring Boot Controller
+            // PUBLISH TO THE PRIVATE ROOM ENDPOINT
             stompClientRef.current.publish({
-                destination: '/app/chat.sendMessage',
-                body: JSON.stringify(chatMessage)
+                destination: `/app/chat.sendPrivate/${activeRoomId}`,
+                body: JSON.stringify({ sender: userEmail, content: messageInput, type: 'CHAT' })
             });
-
-            setMessageInput(''); // Clear the input box
+            setMessageInput('');
         }
     };
 
     return (
-        <div style={{ maxWidth: '600px', margin: '20px auto', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '20px' }}>
-            <h2 align= 'center'>Live Mentorship Lounge</h2>
-            <div style={{ height: '300px', overflowY: 'scroll', border: '1px solid #eee', padding: '10px', marginBottom: '10px', backgroundColor: '#28231D' }}>
-                {!connected && <p style={{ color: 'gray', fontStyle: 'italic' }}>Connecting to live server...</p>}
+        <div style={{ maxWidth: '600px', margin: '20px auto', border: '1px solid #ccc', borderRadius: '8px', padding: '20px', backgroundColor: '#1e1e1e' }}>
+            <h2 align='center' style={{ color: 'white', margin: '0 0 20px 0' }}>Private Mentorship Lounge</h2>
 
-                {messages.map((msg, index) => (
-                    <div key={index} style={{ marginBottom: '10px', textAlign: msg.sender === userEmail ? 'right' : 'left' }}>
-                        {msg.type === 'JOIN' ? (
-                            <span style={{ fontSize: '12px', color: 'gray', fontStyle: 'italic',color: 'GREEN' }}>{msg.sender} joined the room</span>
-                        ) : msg.type === 'LEAVE' ? (
-                            <span style={{ fontSize: '12px', color: 'gray', fontStyle: 'italic' , }}>{msg.sender} left the room</span>
-                        ) : (
-                            <div style={{ display: 'inline-block', backgroundColor: msg.sender === userEmail ? '#414A4C' : '#8A7F8D', padding: '8px 12px', borderRadius: '15px', border: '1px solid #ddd' }}>
-                                <strong style={{ display: 'block', fontSize: '11px', color: '#FFFFFF' }}>{msg.sender}</strong>
-                                <span>{msg.content}</span>
-                            </div>
-                        )}
+            <div style={{ height: '300px', overflowY: 'auto', border: '1px solid #555', padding: '15px', marginBottom: '15px', backgroundColor: '#28231D', borderRadius: '5px' }}>
+
+                {/* Visual feedback if they aren't in a session */}
+                {!activeRoomId ? (
+                    <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'gray', fontStyle: 'italic' }}>
+                        Join a session from the directory to start chatting.
                     </div>
-                ))}
+                ) : messages.length === 0 ? (
+                    <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#40E0D0', fontStyle: 'italic' }}>
+                        Secure connection established. Say hello!
+                    </div>
+                ) : (
+                    messages.map((msg, index) => (
+                        <div key={index} style={{ marginBottom: '10px', textAlign: msg.sender === userEmail ? 'right' : 'left' }}>
+                            <div style={{ display: 'inline-block', backgroundColor: msg.sender === userEmail ? '#414A4C' : '#8A7F8D', padding: '8px 12px', borderRadius: '15px', border: '1px solid #555' }}>
+                                <strong style={{ display: 'block', fontSize: '11px', color: '#FFFFFF', marginBottom: '4px' }}>{msg.sender}</strong>
+                                <span style={{ color: 'white' }}>{msg.content}</span>
+                            </div>
+                        </div>
+                    ))
+                )}
             </div>
 
             <form onSubmit={sendMessage} style={{ display: 'flex', gap: '10px' }}>
@@ -99,11 +87,17 @@ const Chat = () => {
                     type="text"
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}
-                    placeholder="Type a message..."
-                    style={{ flex: 1, padding: '20px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#3a3a3a', color: 'white' }}
-                    disabled={!connected}
+                    placeholder={activeRoomId ? "Type a private message..." : "Waiting for session..."}
+                    style={{ flex: 1, padding: '15px', borderRadius: '4px', border: '1px solid #555', backgroundColor: '#3a3a3a', color: 'white' }}
+                    disabled={!activeRoomId || !connected}
                 />
-                <button type="submit" disabled={!connected} style={{ borderRadius: '8px' }} >Send</button>
+                <button
+                    type="submit"
+                    disabled={!activeRoomId || !connected}
+                    style={{ borderRadius: '8px', padding: '0 20px', backgroundColor: (!activeRoomId || !connected) ? '#555' : '#39FF14', color: 'black', fontWeight: 'bold', border: 'none', cursor: (!activeRoomId || !connected) ? 'not-allowed' : 'pointer' }}
+                >
+                    Send
+                </button>
             </form>
         </div>
     );
