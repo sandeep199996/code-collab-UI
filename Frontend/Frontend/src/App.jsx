@@ -47,11 +47,11 @@ const [showRegister, setShowRegister] = useState(false);
         <UserList onSessionStart={(roomId) => setActiveRoomId(roomId)}
                                   onSessionEnd={() => setActiveRoomId(null)}/>
         <hr style={{ margin: '30px 0' }} />
-        <VideoCall />
+        <VideoCall activeRoomId={activeRoomId}/>
         <hr style={{ margin: '30px 0' }} />
-        <CodeWorkspace />
+        <CodeWorkspace activeRoomId={activeRoomId}/>
         <hr style={{ margin: '30px 0' }} />
-        <Chat activeRoomId={activeRoomId}/> { /* to only show the chat if they are logged in, since we need their email for the username */ }
+        <Chat activeRoomId={activeRoomId}/>
         </>
         ) : (
             showRegister ? (

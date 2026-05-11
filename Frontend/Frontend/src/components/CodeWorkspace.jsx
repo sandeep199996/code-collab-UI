@@ -3,98 +3,84 @@ import Editor from '@monaco-editor/react';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 
-const CodeWorkspace = () => {
+// Accept the Room ID prop
+const CodeWorkspace = ({ activeRoomId }) => {
     const defaultJavaCode = `public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, Mentor!");\n    }\n}`;
 
     const [code, setCode] = useState(defaultJavaCode);
     const stompClientRef = useRef(null);
 
-    // Grab our email so we know who is typing
     const token = localStorage.getItem('mentor_jwt');
     const userEmail = token ? JSON.parse(atob(token.split('.')[1])).sub : 'Anonymous';
 
     useEffect(() => {
-        // 1. Connect to the WebSocket
+        // Disconnect and clear if not in a room
+        if (!activeRoomId) {
+            setCode(defaultJavaCode); // Reset editor for the next session
+            if (stompClientRef.current) stompClientRef.current.deactivate();
+            return;
+        }
+
         const socket = new SockJS('http://localhost:8080/ws');
         const client = new Client({
             webSocketFactory: () => socket,
             reconnectDelay: 5000,
             onConnect: () => {
-
-                // 2. Subscribe to the dedicated CODE room
-               client.subscribe('/topic/code', (message) => {
-                                   const receivedMessage = JSON.parse(message.body);
-
-                                   // --- NEW DEBUG LOGS ---
-                                   console.log("RECEIVED CODE UPDATE: ", receivedMessage);
-                                   console.log("My Email: ", userEmail, " | Sender Email: ", receivedMessage.sender);
-                                   // ----------------------
-
-                                   if (receivedMessage.sender !== userEmail) {
-                                       console.log("Emails don't match. Updating editor!");
-                                       setCode(receivedMessage.content);
-                                   } else {
-                                       console.log("Ignored my own keystroke.");
-                                   }
-                               });
-            },
-                onStompError: (frame) => {
-                   console.error('SERVER REJECTED MESSAGE: ' + frame.headers['message']);
-                                   console.error('Details: ' + frame.body);
-                               }
+                // Subscribe to the PRIVATE code topic
+               client.subscribe(`/topic/session/${activeRoomId}/code`, (message) => {
+                   const receivedMessage = JSON.parse(message.body);
+                   if (receivedMessage.sender !== userEmail) {
+                       setCode(receivedMessage.content);
+                   }
+               });
+            }
         });
 
         client.activate();
         stompClientRef.current = client;
 
-        return () => {
-            if (client) {
-                client.deactivate();
-            }
-        };
-    }, [userEmail]);
+        return () => { if (client) client.deactivate(); };
+    }, [activeRoomId]);
 
-   const handleEditorChange = (value) => {
-           // 1. Update our own screen instantly
-           setCode(value);
+    const handleEditorChange = (value) => {
+        setCode(value);
 
-           // 2. Log that we are trying to send
-           console.log("User typed something. Attempting to broadcast...");
+        if (stompClientRef.current && stompClientRef.current.connected && activeRoomId) {
+            // Send exactly to the PRIVATE code endpoint
+            stompClientRef.current.publish({
+                destination: `/app/code.sendPrivate/${activeRoomId}`,
+                body: JSON.stringify({
+                    sender: userEmail,
+                    content: value,
+                    type: 'CODE'
+                })
+            });
+        }
+    };
 
-           // 3. Removed the strict .connected check that was likely failing silently
-           if (stompClientRef.current) {
-               console.log("Broadcasting to /app/code.sendChange");
-
-               stompClientRef.current.publish({
-                   destination: '/app/code.sendChange',
-                   body: JSON.stringify({
-                       sender: userEmail,
-                       content: value,
-                       type: 'CODE'
-                   })
-               });
-           } else {
-               console.log("WARNING: STOMP client is not ready yet!");
-           }
-       };
     return (
         <div style={{ marginTop: '20px', border: '1px solid #ccc', borderRadius: '8px', padding: '20px', backgroundColor: '#1e1e1e', color: 'white' }}>
-            <h2 style={{ marginTop: 0, borderBottom: '1px solid #333', paddingBottom: '10px' }}>
-                Collaborative Java Workspace
+            <h2 style={{ marginTop: 0, borderBottom: '1px solid #333', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                <span>Collaborative Workspace</span>
+                {/* Visual Indicator of Lock Status */}
+                <span style={{ fontSize: '14px', color: activeRoomId ? '#39FF14' : '#FF073A' }}>
+                    {activeRoomId ? '🔒 Secure Sync Active' : '🔓 Offline Mode'}
+                </span>
             </h2>
 
-            <div style={{ borderRadius: '5px', overflow: 'hidden', border: '1px solid #555' }}>
+            <div style={{ borderRadius: '5px', overflow: 'hidden', border: '1px solid #555', opacity: activeRoomId ? 1 : 0.6 }}>
                 <Editor
                     height="400px"
                     language="java"
                     theme="vs-dark"
-                    value={code} // Ties the editor strictly to our React state
-                    onChange={handleEditorChange} // Fires every single time you hit a key
+                    value={code}
+                    onChange={handleEditorChange}
                     options={{
                         minimap: { enabled: false },
                         fontSize: 15,
                         wordWrap: 'on',
                         automaticLayout: true,
+                        readOnly: !activeRoomId // Locks the keyboard if no session!
                     }}
                 />
             </div>

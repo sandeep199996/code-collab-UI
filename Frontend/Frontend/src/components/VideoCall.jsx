@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 
-const VideoCall = () => {
+// Accept the Room ID prop
+const VideoCall = ({ activeRoomId }) => {
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
     const peerConnectionRef = useRef(null);
@@ -13,37 +14,41 @@ const VideoCall = () => {
     const token = localStorage.getItem('mentor_jwt');
     const userEmail = token ? JSON.parse(atob(token.split('.')[1])).sub : 'Anonymous';
 
-
     const rtcConfig = {
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     };
 
     useEffect(() => {
-        // 1. Connecting Spring Boot WebSocket for Signaling
+        // Disconnect and turn off cameras if session ends
+        if (!activeRoomId) {
+            setInCall(false);
+            if (localVideoRef.current && localVideoRef.current.srcObject) {
+                localVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
+            }
+            if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+            if (peerConnectionRef.current) peerConnectionRef.current.close();
+            if (stompClientRef.current) stompClientRef.current.deactivate();
+            return;
+        }
+
         const socket = new SockJS('http://localhost:8080/ws');
         const client = new Client({
             webSocketFactory: () => socket,
             onConnect: () => {
-                client.subscribe('/topic/video', async (message) => {
+                // Subscribe to the PRIVATE video signaling topic
+                client.subscribe(`/topic/session/${activeRoomId}/video`, async (message) => {
                     const signal = JSON.parse(message.body);
-
-                    // Ignore our own signals
                     if (signal.sender === userEmail) return;
-console.log("📥 RECEIVED SIGNAL:", signal.type);
+
                     const payload = JSON.parse(signal.content);
-try {
-                    // 2. Handle Incoming Signals
-                    if (signal.type === 'VIDEO_OFFER') {
-                        console.log("📞 Processing Offer from peer...");
-                        await handleReceiveOffer(payload);
-                    } else if (signal.type === 'VIDEO_ANSWER') {
-                        console.log("✅ Processing Answer from peer...");
-                        await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(payload));
-                    } else if (signal.type === 'ICE_CANDIDATE') {
-                        console.log("❄️ Processing ICE (Network) Candidate...");
-                        await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(payload));
-                    }} catch (error) {
-                        console.error("❌ WEBRTC ERROR:", error);}
+
+                    try {
+                        if (signal.type === 'VIDEO_OFFER') await handleReceiveOffer(payload);
+                        else if (signal.type === 'VIDEO_ANSWER') await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(payload));
+                        else if (signal.type === 'ICE_CANDIDATE') await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(payload));
+                    } catch (error) {
+                        console.error("❌ WEBRTC ERROR:", error);
+                    }
                 });
             }
         });
@@ -55,32 +60,23 @@ try {
             if (client) client.deactivate();
             if (peerConnectionRef.current) peerConnectionRef.current.close();
         };
-    }, []);
-
-    // --- WebRTC Logic ---
+    }, [activeRoomId]);
 
     const setupMediaAndConnection = async () => {
-        // Grab the webcam and microphone
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        localVideoRef.current.srcObject = stream;
+        if(localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-        // Create the Peer Connection
         const pc = new RTCPeerConnection(rtcConfig);
         peerConnectionRef.current = pc;
 
-        // Feed our webcam tracks into the connection
         stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-        // When the other person's video arrives, put it in the remote `<video>` tag
         pc.ontrack = (event) => {
-            remoteVideoRef.current.srcObject = event.streams[0];
+            if(remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
         };
 
-        // When we find our own network routing info, send it to the other person via Spring Boot
         pc.onicecandidate = (event) => {
-            if (event.candidate) {
-                sendSignal('ICE_CANDIDATE', event.candidate);
-            }
+            if (event.candidate) sendSignal('ICE_CANDIDATE', event.candidate);
         };
 
         return pc;
@@ -89,8 +85,6 @@ try {
     const startCall = async () => {
         setInCall(true);
         const pc = await setupMediaAndConnection();
-
-        // Create an offer and send it to the room
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         sendSignal('VIDEO_OFFER', offer);
@@ -99,20 +93,17 @@ try {
     const handleReceiveOffer = async (offer) => {
         setInCall(true);
         const pc = await setupMediaAndConnection();
-
-        // Accept the offer and create an answer
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-
         sendSignal('VIDEO_ANSWER', answer);
     };
 
     const sendSignal = (type, payload) => {
-        console.log("📤 Sending Signal:", type);
-        if (stompClientRef.current && stompClientRef.current.connected) {
+        if (stompClientRef.current && stompClientRef.current.connected && activeRoomId) {
+            // Send exactly to the PRIVATE video endpoint
             stompClientRef.current.publish({
-                destination: '/app/video.signal',
+                destination: `/app/video.sendPrivate/${activeRoomId}`,
                 body: JSON.stringify({
                     sender: userEmail,
                     content: JSON.stringify(payload),
@@ -124,25 +115,28 @@ try {
 
     return (
         <div style={{ marginTop: '20px', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', backgroundColor: '#022D36' }}>
-            <h2 align='center'>Mentorship Video Call</h2>
+            <h2 align='center' style={{ color: 'white' }}>Mentorship Video Call</h2>
 
             <div style={{ display: 'flex', gap: '20px', marginBottom: '15px' }}>
                 <div style={{ flex: 1, backgroundColor: 'black', borderRadius: '8px', overflow: 'hidden' }}>
-                    {/* The other person's video (Large) */}
                     <video ref={remoteVideoRef} autoPlay playsInline style={{ width: '100%', height: '300px', objectFit: 'cover' }} />
                 </div>
-                <div style={{ width: '200px', backgroundColor: 'black', borderRadius: '8px', overflow: 'hidden' }}>
-                    {/* own video (Small) */}
+                <div style={{ width: '200px', backgroundColor: 'black', borderRadius: '8px', overflow: 'hidden', position: 'relative' }}>
                     <video ref={localVideoRef} autoPlay playsInline muted style={{ width: '100%', height: '150px', objectFit: 'cover' }} />
                 </div>
             </div>
 
-            {!inCall ? (
-                <button onClick={startCall} style={{ padding: '10px 20px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-                    Start Video Call
-                </button>
+            {/* UI Lock Logic: Only show the start button if they are in a room */}
+            {!activeRoomId ? (
+                 <p style={{ color: 'gray', textAlign: 'center', fontStyle: 'italic' }}>Connect with a user to unlock video calls.</p>
+            ) : !inCall ? (
+                <div style={{ textAlign: 'center' }}>
+                    <button onClick={startCall} style={{ padding: '10px 20px', backgroundColor: '#39FF14', color: 'black', fontWeight: 'bold', border: 'none', borderRadius: '5px', cursor: 'pointer', boxShadow: '0 0 10px rgba(57, 255, 20, 0.5)' }}>
+                        Start Secure Call
+                    </button>
+                </div>
             ) : (
-                <p style={{ color: 'green', fontWeight: 'bold' }}>Call Connected / Waiting for Peer...</p>
+                <p style={{ color: '#39FF14', fontWeight: 'bold', textAlign: 'center' }}>Secure P2P Tunnel Established.</p>
             )}
         </div>
     );
