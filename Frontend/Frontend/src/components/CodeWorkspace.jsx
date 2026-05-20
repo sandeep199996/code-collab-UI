@@ -10,7 +10,8 @@ const CodeWorkspace = ({ activeRoomId }) => {
         java: `public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, Java Mentor!");\n    }\n}`,
         python: `def greet():\n    print("Hello, Python Mentor!")\n\ngreet()`,
         javascript: `console.log("Hello, JavaScript Mentor!");`
-    };
+    };const [snippetTitle, setSnippetTitle] = useState('');
+      const [isSaving, setIsSaving] = useState(false);
 
     const [language, setLanguage] = useState('java');
     const [code, setCode] = useState(templates.java);
@@ -86,7 +87,32 @@ const CodeWorkspace = ({ activeRoomId }) => {
        }
        setIsCompiling(false);
    };
+const handleSaveSnippet = async () => {
+    if (!snippetTitle.trim() || !code.trim()) {
+        alert("Please provide a title and ensure the editor is not empty.");
+        return;
+    }
 
+    setIsSaving(true);
+    const token = localStorage.getItem('mentor_jwt');
+
+    try {
+        await axios.post('http://localhost:8080/api/snippets', {
+            title: snippetTitle,
+            language: language, // Assuming you have a 'language' state for the editor
+            code: code          // Assuming your editor code is stored in a 'code' state
+        }, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        alert("Snippet saved successfully!");
+        setSnippetTitle(''); // Clear the title after saving
+    } catch (err) {
+        alert("Failed to save snippet.");
+    } finally {
+        setIsSaving(false);
+    }
+};
     return (
         <div style={{ marginTop: '20px', border: '1px solid #333', borderRadius: '8px', padding: '20px', backgroundColor: '#050100', color: 'white' }}>
             <h2 style={{ marginTop: 0, borderBottom: '1px solid #333', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -114,7 +140,22 @@ const CodeWorkspace = ({ activeRoomId }) => {
                     </button>
                 </div>
             </h2>
-
+<div style={{ display: 'flex', gap: '10px', marginBottom: '10px', backgroundColor: '#111', padding: '10px', borderRadius: '4px' }}>
+    <input
+        type="text"
+        placeholder="Name your snippet..."
+        value={snippetTitle}
+        onChange={(e) => setSnippetTitle(e.target.value)}
+        style={{ flex: 1, padding: '8px', backgroundColor: 'black', color: 'white', border: '1px solid #333', borderRadius: '4px' }}
+    />
+    <button
+        onClick={handleSaveSnippet}
+        disabled={isSaving}
+        style={{ padding: '8px 15px', backgroundColor: '#40E0D0', color: 'black', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: isSaving ? 'wait' : 'pointer' }}
+    >
+        {isSaving ? 'Saving...' : '💾 Save to Vault'}
+    </button>
+</div>
             <div style={{ borderRadius: '5px', overflow: 'hidden', border: '1px solid #333', opacity: activeRoomId ? 1 : 0.5, marginBottom: '15px' }}>
                 <Editor
                     height="350px"

@@ -8,6 +8,7 @@ import VideoCall from './components/VideoCall';
 import AdminDashboard from './components/AdminDashboard';
 import './App.css';
 import ProfileSettings from './components/ProfileSettings';
+import SnippetLibrary from './components/SnippetLibrary';
 function App() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('mentor_jwt'));
@@ -90,6 +91,12 @@ function App() {
                             ⬅ Back to App
                         </button>
                     )}
+                {/* My Snippets Library Button */}
+                    {currentView !== 'LIBRARY' && (
+                        <button onClick={() => { setCurrentView('LIBRARY'); setShowProfileMenu(false); }} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', textAlign: 'left', marginBottom: '10px' }}>
+                            💾 My Snippets
+                        </button>
+                    )}
 {/* Regular User Settings Button */}
     {currentView !== 'SETTINGS' && (
         <button onClick={() => { setCurrentView('SETTINGS'); setShowProfileMenu(false); }} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', textAlign: 'left', marginBottom: '10px' }}>
@@ -118,7 +125,9 @@ function App() {
                   <AdminDashboard />
               ) :currentView === 'SETTINGS' ? (
                                  <ProfileSettings userEmail={userEmail} onAccountDeleted={handleAccountDeleted} />
-                             ): (
+                             ):  currentView === 'LIBRARY' ? (
+                                                <SnippetLibrary />
+                                            ) :(
                   <>
                       {/* The Switchboard */}
                       <UserList onSessionStart={(roomId) => setActiveRoomId(roomId)} onSessionEnd={() => setActiveRoomId(null)} />
