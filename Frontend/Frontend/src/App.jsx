@@ -7,7 +7,7 @@ import CodeWorkspace from './components/CodeWorkspace';
 import VideoCall from './components/VideoCall';
 import AdminDashboard from './components/AdminDashboard';
 import './App.css';
-
+import ProfileSettings from './components/ProfileSettings';
 function App() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('mentor_jwt'));
@@ -47,6 +47,15 @@ function App() {
     setActiveRoomId(null);
     setShowProfileMenu(false);
   };
+  const handleAccountDeleted = () => {
+        // 1. Shred the Ghost Token
+        localStorage.removeItem('mentor_jwt');
+        // 2. Reset all React states instantly
+        setIsLoggedIn(false);
+        setShowProfileMenu(false);
+        setCurrentView('DIRECTORY');
+        alert("Your account and all associated data have been permanently deleted.");
+    };
 
   return (
         <div>
@@ -81,6 +90,19 @@ function App() {
                             ⬅ Back to App
                         </button>
                     )}
+{/* Regular User Settings Button */}
+    {currentView !== 'SETTINGS' && (
+        <button onClick={() => { setCurrentView('SETTINGS'); setShowProfileMenu(false); }} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', textAlign: 'left', marginBottom: '10px' }}>
+            👤 Profile Settings
+        </button>
+    )}
+    {/* Return Button if they are already in Settings */}
+    {currentView === 'SETTINGS' && (
+        <button onClick={() => { setCurrentView('DIRECTORY'); setShowProfileMenu(false); }} style={{ width: '100%', padding: '8px', backgroundColor: '#333', border: 'none', color: '#E0B0FF', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '10px' }}>
+            ⬅ Back to App
+        </button>
+    )}
+
 
                     <button onClick={handleLogout} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: '1px solid #FF073A', color: '#FF073A', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
                       Sign Out
@@ -94,7 +116,9 @@ function App() {
          {isLoggedIn ? (
               currentView === 'ADMIN' ? (
                   <AdminDashboard />
-              ) : (
+              ) :currentView === 'SETTINGS' ? (
+                                 <ProfileSettings userEmail={userEmail} onAccountDeleted={handleAccountDeleted} />
+                             ): (
                   <>
                       {/* The Switchboard */}
                       <UserList onSessionStart={(roomId) => setActiveRoomId(roomId)} onSessionEnd={() => setActiveRoomId(null)} />
