@@ -9,6 +9,7 @@ import AdminDashboard from './components/AdminDashboard';
 import './App.css';
 import ProfileSettings from './components/ProfileSettings';
 import SnippetLibrary from './components/SnippetLibrary';
+import ClassInvitation from './components/ClassInvitation';
 function App() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('mentor_jwt'));
@@ -60,8 +61,9 @@ function App() {
 
   return (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0', padding: '0 20px' }}>
-            <h1 style={{ fontFamily: 'Arial, sans-serif', color: '#7A4988', margin: 0 }}>Code-Collaboration Platform</h1>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0', padding: '0 20px' ,position: 'relative'}}>
+            <div style={{ width: '45px'}}></div> {/* Placeholder for alignment */}
+            <h1  style={{position:'absolute', left:'50%',transform: 'translateX(-50%)',fontFamily: 'Arial, sans-serif', color: '#7A4988', margin: 0, textAlign: 'center', width: 'max-content' }}> Code-Collaboration Platform</h1>
 
             {isLoggedIn && (
               <div style={{ position: 'relative' }}>
@@ -120,6 +122,16 @@ function App() {
             )}
           </div>
 
+{isLoggedIn && (
+        <ClassInvitation
+            userEmail={userEmail}
+            onAccept={(roomId) => {
+                setActiveRoomId(roomId);
+                setCurrentView('DIRECTORY');
+            }}
+        />
+      )}
+
          {isLoggedIn ? (
               currentView === 'ADMIN' ? (
                   <AdminDashboard />
@@ -130,11 +142,11 @@ function App() {
                                             ) :(
                   <>
                       {/* The Switchboard */}
-                      <UserList onSessionStart={(roomId) => setActiveRoomId(roomId)} onSessionEnd={() => setActiveRoomId(null)} />
+                    <UserList activeRoomId={activeRoomId} onSessionStart={(roomId) => setActiveRoomId(roomId)} onSessionEnd={() => setActiveRoomId(null)} />
                       <hr style={{ margin: '30px 0', borderColor: '#333' }} />
 
                       {/* Locked-down components */}
-                      <VideoCall activeRoomId={activeRoomId} />
+                      <VideoCall activeRoomId={activeRoomId} onSessionEnd={() => setActiveRoomId(null)} />
                       <hr style={{ margin: '30px 0', borderColor: '#333' }} />
                       <CodeWorkspace activeRoomId={activeRoomId} />
                       <hr style={{ margin: '30px 0', borderColor: '#333' }} />

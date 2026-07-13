@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 
-const VideoCall = ({ activeRoomId }) => {
+const VideoCall = ({ activeRoomId, onSessionEnd }) => {
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
     const peerConnectionRef = useRef(null);
@@ -22,7 +22,18 @@ const VideoCall = ({ activeRoomId }) => {
     const userEmail = token ? JSON.parse(atob(token.split('.')[1])).sub : 'Anonymous';
 
     const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-
+const handleLeaveSession = () => {
+        if (localStreamRef.current) localStreamRef.current.getTracks().forEach(track => track.stop());
+        if (peerConnectionRef.current) peerConnectionRef.current.close();
+        setInCall(false);
+        if (stompClientRef.current && stompClientRef.current.connected) {
+            stompClientRef.current.publish({
+                destination: '/app/presence.setStatus',
+                body: JSON.stringify({ email: userEmail, status: 'ONLINE' })
+            });
+        }
+        if (onSessionEnd) onSessionEnd();
+    };
     useEffect(() => {
         if (!activeRoomId) {
             setInCall(false);
@@ -42,6 +53,13 @@ const VideoCall = ({ activeRoomId }) => {
         const client = new Client({
             webSocketFactory: () => socket,
             onConnect: () => {
+                client.subscribe(`/topic/room/${activeRoomId}/commands`, (message) => {
+                                    const payload = JSON.parse(message.body);
+                                    if (payload.command === 'TERMINATE') {
+                                        alert("⚠️ This session has been terminated by an Administrator.");
+                                        handleLeaveSession();
+                                    }
+                                });
                 client.subscribe(`/topic/session/${activeRoomId}/video`, async (message) => {
                     const signal = JSON.parse(message.body);
                     if (signal.sender === userEmail) return;
@@ -215,6 +233,12 @@ const VideoCall = ({ activeRoomId }) => {
                     >
                         {isScreenSharing ? '🛑 Stop Sharing' : '🖥️ Share Screen'}
                     </button>
+                    <button
+                                            onClick={handleLeaveSession}
+                                            style={{ padding: '10px 15px', borderRadius: '5px', border: '1px solid #FF073A', fontWeight: 'bold', cursor: 'pointer', backgroundColor: 'transparent', color: '#FF073A', transition: 'all 0.2s', marginLeft: '10px' }}
+                                        >
+                                            🚪 Leave Session
+                                        </button>
                 </div>
             )}
         </div>

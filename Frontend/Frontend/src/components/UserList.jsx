@@ -3,7 +3,7 @@ import axios from 'axios';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 
-const UserList = ({ onSessionStart, onSessionEnd }) => {
+const UserList = ({ onSessionStart, onSessionEnd ,activeRoomId}) => {
     // Directory & Pagination State
     const [users, setUsers] = useState([]);
     const [error, setError] = useState(null);
@@ -50,7 +50,23 @@ const UserList = ({ onSessionStart, onSessionEnd }) => {
         fetchDirectory();
     };
 
+// --- 3. AUTO-SYNC PRESENCE WITH ROOM STATE ---
+    // This watches activeRoomId. Whether they join a 1-1 or a Group class,
+    // it automatically tells the server to lock or unlock their status!
+    useEffect(() => {
+        // Wait 500ms to ensure the STOMP client has finished connecting
+        const timeoutId = setTimeout(() => {
+            if (stompClientRef.current && stompClientRef.current.connected) {
+                if (activeRoomId) {
+                    changeMyStatus('BUSY');
+                } else {
+                    changeMyStatus('ONLINE');
+                }
+            }
+        }, 500);
 
+        return () => clearTimeout(timeoutId);
+    }, [activeRoomId]);
     // --- 2. THE WEBSOCKET EFFECT (Runs exactly once on mount) ---
     useEffect(() => {
         if (!token) return;
@@ -118,12 +134,17 @@ const UserList = ({ onSessionStart, onSessionEnd }) => {
                 destination: '/app/session.accept',
                 body: JSON.stringify({ sender: currentUserEmail, target: incomingInvite, type: 'ACCEPT' })
             });
-        }
+
         setConnectedUser(incomingInvite);
+        setIncomingInvite(null);
         changeMyStatus('BUSY');
         const roomId = [currentUserEmail, incomingInvite].sort().join('-room-');
         onSessionStart(roomId);
-        setIncomingInvite(null);
+                            stompClientRef.current.publish({
+                                destination: '/app/presence.setStatus',
+                                body: JSON.stringify({ email: currentUserEmail, status: 'BUSY' })
+                            });
+        }
     };
 
     const handleDeclineInvite = () => setIncomingInvite(null);
@@ -227,16 +248,16 @@ const UserList = ({ onSessionStart, onSessionEnd }) => {
                                         Disconnect
                                     </button>
                                 ) : (
-                                    <button onClick={() => handleInvite(user.email)} disabled={isBusy || isOffline || connectedUser !== null} style={{
-                                        width: '100%', marginTop: '15px', padding: '10px',
-                                        backgroundColor: (isBusy || isOffline || connectedUser !== null) ? '#333' : 'transparent',
-                                        color: (isBusy || isOffline || connectedUser !== null) ? '#666' : '#39FF14',
-                                        border: `1px solid ${(isBusy || isOffline || connectedUser !== null) ? '#333' : '#39FF14'}`,
-                                        borderRadius: '4px', fontWeight: 'bold',
-                                        cursor: (isBusy || isOffline || connectedUser !== null) ? 'not-allowed' : 'pointer'
-                                    }}>
-                                        {isBusy ? 'In a Session' : 'Connect'}
-                                    </button>
+                                   <button onClick={() => handleInvite(user.email)} disabled={activeRoomId != null || isBusy || isOffline || connectedUser !== null} style={{
+                                                                           width: '100%', marginTop: '15px', padding: '10px',
+                                                                           backgroundColor: (activeRoomId != null || isBusy || isOffline || connectedUser !== null) ? '#333' : 'transparent',
+                                                                           color: (activeRoomId != null || isBusy || isOffline || connectedUser !== null) ? '#666' : '#39FF14',
+                                                                           border: `1px solid ${(activeRoomId != null || isBusy || isOffline || connectedUser !== null) ? '#333' : '#39FF14'}`,
+                                                                           borderRadius: '4px', fontWeight: 'bold',
+                                                                           cursor: (activeRoomId != null || isBusy || isOffline || connectedUser !== null) ? 'not-allowed' : 'pointer'
+                                                                       }}>
+                                                                           {isBusy ? 'In a Session' : 'Connect'}
+                                                                       </button>
                                 )}
                             </div>
                         );
