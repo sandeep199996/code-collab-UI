@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import SockJS from 'sockjs-client';
+import { Client } from '@stomp/stompjs';
 import UserList from './components/UserList';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -10,11 +13,14 @@ import './App.css';
 import ProfileSettings from './components/ProfileSettings';
 import SnippetLibrary from './components/SnippetLibrary';
 import ClassInvitation from './components/ClassInvitation';
+import DirectMessageUI from './components/DirectMessageUI';
 function App() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('mentor_jwt'));
   const [showRegister, setShowRegister] = useState(false);
   const [activeRoomId, setActiveRoomId] = useState(null);
+
+
 
  // --- BULLETPROOF JWT DECODER ---
    const jwt = localStorage.getItem('mentor_jwt');
@@ -41,7 +47,37 @@ function App() {
    const [currentView, setCurrentView] = useState('DIRECTORY');
   //  State for the Profile Dropdown
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+useEffect(() => {
+       if (isLoggedIn && userEmail) {
+           axios.get('http://localhost:8080/api/messages/unread', {
+               headers: { 'Authorization': `Bearer ${localStorage.getItem('mentor_jwt')}` }
+           })
+           .then(res => setUnreadCount(res.data))
+           .catch(err => console.error("Failed to fetch unread count"));
+       }
+   }, [isLoggedIn, userEmail, currentView]);
 
+   // Global background STOMP listener
+   useEffect(() => {
+       if (!isLoggedIn || !userEmail) return;
+
+       const socket = new SockJS('http://localhost:8080/ws');
+       const client = new Client({
+           webSocketFactory: () => socket,
+           onConnect: () => {
+               client.subscribe(`/topic/messages/${userEmail}`, (msg) => {
+                   if (currentView !== 'INBOX') {
+                       setUnreadCount(prev => prev + 1);
+                       new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {});
+                   }
+               });
+           }
+       });
+
+       client.activate();
+       return () => { if (client) client.deactivate(); };
+   }, [isLoggedIn, userEmail, currentView]);
 
   const handleLogout = () => {
     localStorage.removeItem('mentor_jwt');
@@ -58,6 +94,18 @@ function App() {
         setCurrentView('DIRECTORY');
         alert("Your account and all associated data have been permanently deleted.");
     };
+// Fetch unread message count on load
+  useEffect(() => {
+      if (isLoggedIn && userEmail) {
+          axios.get('http://localhost:8080/api/messages/unread', {
+              headers: { 'Authorization': `Bearer ${localStorage.getItem('mentor_jwt')}` }
+          })
+          .then(res => setUnreadCount(res.data))
+          .catch(err => console.error("Failed to fetch unread count"));
+      }
+  }, [isLoggedIn, userEmail, currentView]);
+  // Dependency on currentView means it refreshes the count when they navigate!
+
 
   return (
         <div>
@@ -93,6 +141,23 @@ function App() {
                             ⬅ Back to App
                         </button>
                     )}
+                {/* INBOX BUTTON */}
+                                {currentView !== 'INBOX' && (
+                                    <button onClick={() => { setCurrentView('INBOX'); setShowProfileMenu(false); }} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', textAlign: 'left', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>📨 Direct Messages</span>
+                                        {unreadCount > 0 && (
+                                            <span style={{ backgroundColor: '#FF073A', color: 'white', borderRadius: '50%', padding: '2px 8px', fontSize: '12px', fontWeight: 'bold' }}>
+                                                {unreadCount}
+                                            </span>
+                                        )}
+                                    </button>
+                                )}
+                                {/* Return Button if they are already in the Inbox */}
+                                {currentView === 'INBOX' && (
+                                    <button onClick={() => { setCurrentView('DIRECTORY'); setShowProfileMenu(false); }} style={{ width: '100%', padding: '8px', backgroundColor: '#333', border: 'none', color: '#E0B0FF', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '10px' }}>
+                                        ⬅ Back to App
+                                    </button>
+                                )}
                 {/* My Snippets Library Button */}
                     {currentView !== 'LIBRARY' && (
                         <button onClick={() => { setCurrentView('LIBRARY'); setShowProfileMenu(false); }} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', textAlign: 'left', marginBottom: '10px' }}>
@@ -139,7 +204,9 @@ function App() {
                                  <ProfileSettings userEmail={userEmail} onAccountDeleted={handleAccountDeleted} />
                              ):  currentView === 'LIBRARY' ? (
                                                 <SnippetLibrary />
-                                            ) :(
+                                            ) :currentView === 'INBOX' ? (
+                                                                 <DirectMessageUI currentUserEmail={userEmail} />
+                                                             ) : (
                   <>
                       {/* The Switchboard */}
                     <UserList activeRoomId={activeRoomId} onSessionStart={(roomId) => setActiveRoomId(roomId)} onSessionEnd={() => setActiveRoomId(null)} />
