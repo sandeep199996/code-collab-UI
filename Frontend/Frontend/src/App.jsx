@@ -15,6 +15,7 @@ import SnippetLibrary from './components/SnippetLibrary';
 import ClassInvitation from './components/ClassInvitation';
 import DirectMessageUI from './components/DirectMessageUI';
 import SoloWorkspace from './components/SoloWorkspace';
+import ChallengeStudio from './components/ChallengeStudio';
 function App() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('mentor_jwt'));
@@ -87,15 +88,14 @@ useEffect(() => {
     setShowProfileMenu(false);
   };
   const handleAccountDeleted = () => {
-        // 1. Shred the Ghost Token
+
         localStorage.removeItem('mentor_jwt');
-        // 2. Reset all React states instantly
+
         setIsLoggedIn(false);
         setShowProfileMenu(false);
         setCurrentView('DIRECTORY');
         alert("Your account and all associated data have been permanently deleted.");
     };
-// Fetch unread message count on load
   useEffect(() => {
       if (isLoggedIn && userEmail) {
           axios.get('http://localhost:8080/api/messages/unread', {
@@ -105,7 +105,7 @@ useEffect(() => {
           .catch(err => console.error("Failed to fetch unread count"));
       }
   }, [isLoggedIn, userEmail, currentView]);
-  // Dependency on currentView means it refreshes the count when they navigate!
+
 
 
   return (
@@ -177,7 +177,7 @@ useEffect(() => {
             ⬅ Back to App
         </button>
     )}{/* SOLO PRACTICE BUTTON */}
-                      {currentView !== 'SOLO_PRACTICE' && (
+                      {!activeRoomId && currentView !== 'SOLO_PRACTICE' && (
                           <button
                               onClick={() => { setCurrentView('SOLO_PRACTICE'); setShowProfileMenu(false); }}
                               style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: 'none', color: '#39FF14', borderRadius: '4px', cursor: 'pointer', textAlign: 'left', marginBottom: '10px', fontWeight: 'bold' }}
@@ -186,7 +186,7 @@ useEffect(() => {
                           </button>
                       )}
 
-                      {/* Return to App Button (if they are inside the arena) */}
+
                       {currentView === 'SOLO_PRACTICE' && (
                           <button
                               onClick={() => { setCurrentView('DIRECTORY'); setShowProfileMenu(false); }}
@@ -195,6 +195,22 @@ useEffect(() => {
                               ⬅ Back to Directory
                           </button>
                       )}
+                                        {(userRole === 'MENTOR' || userRole === 'ROLE_MENTOR') && currentView !== 'STUDIO' && (
+                                            <button
+                                                onClick={() => { setCurrentView('STUDIO'); setShowProfileMenu(false); }}
+                                                style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: 'none', color: '#E0B0FF', borderRadius: '4px', cursor: 'pointer', textAlign: 'left', marginBottom: '10px', fontWeight: 'bold' }}
+                                            >
+                                                🛠️ Mentor Studio
+                                            </button>
+                                        )}
+                                                          {currentView === 'STUDIO' && (
+                                                              <button
+                                                                  onClick={() => { setCurrentView('DIRECTORY'); setShowProfileMenu(false); }}
+                                                                  style={{ width: '100%', padding: '8px', backgroundColor: '#333', border: 'none', color: '#E0B0FF', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '10px' }}
+                                                              >
+                                                                  ⬅ Back to Directory
+                                                              </button>
+                                                          )}
 
 
                     <button onClick={handleLogout} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: '1px solid #FF073A', color: '#FF073A', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
@@ -227,7 +243,9 @@ useEffect(() => {
                                                                  <DirectMessageUI currentUserEmail={userEmail} />
                                                              ) : currentView === 'SOLO_PRACTICE' ? (
                                                                    <SoloWorkspace />
-                                                               ): (
+                                                               ): currentView === 'STUDIO' ? (
+                                                                                    <ChallengeStudio />
+                                                                                ) :(
                   <>
                       {/* The Switchboard */}
                     <UserList activeRoomId={activeRoomId} onSessionStart={(roomId) => setActiveRoomId(roomId)} onSessionEnd={() => setActiveRoomId(null)} />
