@@ -14,6 +14,7 @@ import ProfileSettings from './components/ProfileSettings';
 import SnippetLibrary from './components/SnippetLibrary';
 import ClassInvitation from './components/ClassInvitation';
 import DirectMessageUI from './components/DirectMessageUI';
+import SoloWorkspace from './components/SoloWorkspace';
 function App() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('mentor_jwt'));
@@ -175,7 +176,25 @@ useEffect(() => {
         <button onClick={() => { setCurrentView('DIRECTORY'); setShowProfileMenu(false); }} style={{ width: '100%', padding: '8px', backgroundColor: '#333', border: 'none', color: '#E0B0FF', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '10px' }}>
             ⬅ Back to App
         </button>
-    )}
+    )}{/* SOLO PRACTICE BUTTON */}
+                      {currentView !== 'SOLO_PRACTICE' && (
+                          <button
+                              onClick={() => { setCurrentView('SOLO_PRACTICE'); setShowProfileMenu(false); }}
+                              style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: 'none', color: '#39FF14', borderRadius: '4px', cursor: 'pointer', textAlign: 'left', marginBottom: '10px', fontWeight: 'bold' }}
+                          >
+                              💻 Solo Practice Arena
+                          </button>
+                      )}
+
+                      {/* Return to App Button (if they are inside the arena) */}
+                      {currentView === 'SOLO_PRACTICE' && (
+                          <button
+                              onClick={() => { setCurrentView('DIRECTORY'); setShowProfileMenu(false); }}
+                              style={{ width: '100%', padding: '8px', backgroundColor: '#333', border: 'none', color: '#E0B0FF', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '10px' }}
+                          >
+                              ⬅ Back to Directory
+                          </button>
+                      )}
 
 
                     <button onClick={handleLogout} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: '1px solid #FF073A', color: '#FF073A', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
@@ -206,7 +225,9 @@ useEffect(() => {
                                                 <SnippetLibrary />
                                             ) :currentView === 'INBOX' ? (
                                                                  <DirectMessageUI currentUserEmail={userEmail} />
-                                                             ) : (
+                                                             ) : currentView === 'SOLO_PRACTICE' ? (
+                                                                   <SoloWorkspace />
+                                                               ): (
                   <>
                       {/* The Switchboard */}
                     <UserList activeRoomId={activeRoomId} onSessionStart={(roomId) => setActiveRoomId(roomId)} onSessionEnd={() => setActiveRoomId(null)} />

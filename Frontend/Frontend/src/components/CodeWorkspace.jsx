@@ -12,7 +12,10 @@ const CodeWorkspace = ({ activeRoomId }) => {
         javascript: `console.log("Hello, JavaScript Mentor!");`
     };const [snippetTitle, setSnippetTitle] = useState('');
       const [isSaving, setIsSaving] = useState(false);
-
+// --- INTERVIEW ARENA STATE ---
+    const [challenges, setChallenges] = useState([]);
+    const [selectedChallengeId, setSelectedChallengeId] = useState('');
+    const [activePrompt, setActivePrompt] = useState(null);
     const [language, setLanguage] = useState('java');
     const [code, setCode] = useState(templates.java);
     const [output, setOutput] = useState('');
@@ -21,7 +24,14 @@ const CodeWorkspace = ({ activeRoomId }) => {
     const stompClientRef = useRef(null);
     const token = localStorage.getItem('mentor_jwt');
     const userEmail = token ? JSON.parse(atob(token.split('.')[1])).sub : 'Anonymous';
-
+// To Fetch available coding challenges on load
+    useEffect(() => {
+        axios.get('http://localhost:8080/api/challenges', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('mentor_jwt')}` }
+        })
+        .then(res => setChallenges(res.data))
+        .catch(err => console.error("Failed to load challenges from mainframe.", err));
+    }, []);
     useEffect(() => {
         if (!activeRoomId) {
             setCode(templates[language]);
@@ -113,7 +123,38 @@ const handleSaveSnippet = async () => {
         setIsSaving(false);
     }
 };
+const handlePushChallenge = () => {
+        const challenge = challenges.find(c => c.id === parseInt(selectedChallengeId));
+        if (!challenge) return;
+
+        // 1. Show the description on  screen
+        setActivePrompt(challenge);
+
+        // 2. Update the local Monaco Editor (replace 'setCode' with state is named)
+        setCode(challenge.starterCode);
+
+        // 3. Blast the starter code to everyone else in the room
+        if (stompClientRef.current && stompClientRef.current.connected) {
+            stompClientRef.current.publish({
+                destination: `/app/code.sendPrivate/${activeRoomId}`,
+                body: JSON.stringify({
+                    sender: currentUserEmail,
+                    content: challenge.starterCode
+                })
+            });
+
+            // Optional: Broadcast the prompt description via the chat channel so the Mentee can read it!
+            stompClientRef.current.publish({
+                destination: `/app/chat.sendPrivate/${activeRoomId}`,
+                body: JSON.stringify({
+                    sender: 'SYSTEM',
+                    content: `🎯 CHALLENGE LOADED: ${challenge.title}\n${challenge.description}`
+                })
+            });
+        }
+    };
     return (
+
         <div style={{ marginTop: '20px', border: '1px solid #333', borderRadius: '8px', padding: '20px', backgroundColor: '#050100', color: 'white' }}>
             <h2 style={{ marginTop: 0, borderBottom: '1px solid #333', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: '#8F00FF' }}>Collaborative IDE</span>
@@ -157,6 +198,38 @@ const handleSaveSnippet = async () => {
     </button>
 </div>
             <div style={{ borderRadius: '5px', overflow: 'hidden', border: '1px solid #333', opacity: activeRoomId ? 1 : 0.5, marginBottom: '15px' }}>
+                            <div style={{ backgroundColor: '#0a0a0a', padding: '15px', borderBottom: '1px solid #333', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+
+                                {/* Mentor Controls */}
+                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                    <span style={{ color: '#E0B0FF', fontWeight: 'bold' }}>Mock Interview:</span>
+                                    <select
+                                        value={selectedChallengeId}
+                                        onChange={(e) => setSelectedChallengeId(e.target.value)}
+                                        style={{ padding: '8px', backgroundColor: 'black', color: 'white', border: '1px solid #40E0D0', borderRadius: '4px', flex: 1 }}
+                                    >
+                                        <option value="">-- Select a Technical Challenge --</option>
+                                        {challenges.map(c => (
+                                            <option key={c.id} value={c.id}>{c.title} ({c.difficulty})</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        onClick={handlePushChallenge}
+                                        disabled={!selectedChallengeId}
+                                        style={{ padding: '8px 15px', backgroundColor: '#39FF14', color: 'black', fontWeight: 'bold', border: 'none', borderRadius: '4px', cursor: selectedChallengeId ? 'pointer' : 'not-allowed' }}
+                                    >
+                                        ⚡ PUSH CHALLENGE
+                                    </button>
+                                </div>
+
+                                {/* Active Prompt Display */}
+                                {activePrompt && (
+                                    <div style={{ marginTop: '10px', padding: '15px', backgroundColor: '#111', borderLeft: '4px solid #39FF14', color: '#ccc', fontSize: '14px', fontFamily: 'monospace' }}>
+                                        <h4 style={{ margin: '0 0 10px 0', color: 'white' }}>{activePrompt.title}</h4>
+                                        {activePrompt.description}
+                                    </div>
+                                )}
+                            </div>
                 <Editor
                     height="350px"
                     language={language} // Tells Monaco how to color the syntax!
