@@ -3,6 +3,7 @@ import Editor from '@monaco-editor/react';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import axios from 'axios';
+import CollaborativeWhiteboard from './CollaborativeWhiteboard';
 
 const CodeWorkspace = ({ activeRoomId }) => {
     // We now have different starter templates based on the language!
@@ -12,6 +13,7 @@ const CodeWorkspace = ({ activeRoomId }) => {
         javascript: `console.log("Hello, JavaScript Mentor!");`
     };const [snippetTitle, setSnippetTitle] = useState('');
       const [isSaving, setIsSaving] = useState(false);
+      const [activeStompClient, setActiveStompClient] = useState(null);
 // --- INTERVIEW ARENA STATE ---
     const [challenges, setChallenges] = useState([]);
     const [selectedChallengeId, setSelectedChallengeId] = useState('');
@@ -20,7 +22,7 @@ const CodeWorkspace = ({ activeRoomId }) => {
     const [code, setCode] = useState(templates.java);
     const [output, setOutput] = useState('');
     const [isCompiling, setIsCompiling] = useState(false);
-
+const [activeTab, setActiveTab] = useState('CODE');
     const stompClientRef = useRef(null);
     const token = localStorage.getItem('mentor_jwt');
     const userEmail = token ? JSON.parse(atob(token.split('.')[1])).sub : 'Anonymous';
@@ -37,6 +39,7 @@ const CodeWorkspace = ({ activeRoomId }) => {
             setCode(templates[language]);
             setOutput('');
             if (stompClientRef.current) stompClientRef.current.deactivate();
+           setActiveStompClient(null)
             return;
         }
 
@@ -45,15 +48,18 @@ const CodeWorkspace = ({ activeRoomId }) => {
             webSocketFactory: () => socket,
             reconnectDelay: 5000,
             onConnect: () => {
+                setActiveStompClient(client);
                client.subscribe(`/topic/session/${activeRoomId}/code`, (message) => {
                    const receivedMessage = JSON.parse(message.body);
                    if (receivedMessage.sender !== userEmail) {
                        setCode(receivedMessage.content);
-                       // Update the language if the other person changed it!
-                       if (receivedMessage.language) setLanguage(receivedMessage.language);
+                    if (receivedMessage.language) setLanguage(receivedMessage.language);
                    }
                });
-            }
+            },
+        onDisconnect: () => {
+                        setActiveStompClient(null);
+                    }
         });
 
         client.activate();
@@ -196,7 +202,21 @@ const handlePushChallenge = () => {
     >
         {isSaving ? 'Saving...' : '💾 Save to Vault'}
     </button>
-</div>
+</div><div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                      <button
+                          onClick={() => setActiveTab('CODE')}
+                          style={{ padding: '8px 15px', backgroundColor: activeTab === 'CODE' ? '#39FF14' : '#222', color: activeTab === 'CODE' ? 'black' : 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                      >
+                          &lt;/&gt; Code Editor
+                      </button>
+                      <button
+                          onClick={() => setActiveTab('WHITEBOARD')}
+                          style={{ padding: '8px 15px', backgroundColor: activeTab === 'WHITEBOARD' ? '#40E0D0' : '#222', color: activeTab === 'WHITEBOARD' ? 'black' : 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                      >
+                          📐 Architecture Whiteboard
+                      </button>
+                  </div>
+                  {activeTab === 'CODE' ? (
             <div style={{ borderRadius: '5px', overflow: 'hidden', border: '1px solid #333', opacity: activeRoomId ? 1 : 0.5, marginBottom: '15px' }}>
                             <div style={{ backgroundColor: '#0a0a0a', padding: '15px', borderBottom: '1px solid #333', display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
@@ -239,6 +259,15 @@ const handlePushChallenge = () => {
                     options={{ minimap: { enabled: false }, fontSize: 15, wordWrap: 'on', automaticLayout: true, readOnly: !activeRoomId }}
                 />
             </div>
+            ) : (
+                            <div style={{ height: '500px', borderRadius: '5px', overflow: 'hidden', border: '1px solid #333', opacity: activeRoomId ? 1 : 0.5, marginBottom: '15px' }}>
+                                <CollaborativeWhiteboard
+                                    stompClient={stompClientRef.current}
+                                    roomId={activeRoomId}
+                                    currentUserEmail={userEmail}
+                                />
+                            </div>
+                        )}
 
             <div style={{ backgroundColor: '#1e1e1e', borderRadius: '5px', border: '1px solid #333', padding: '15px', fontFamily: 'monospace', minHeight: '100px', color: '#40E0D0', whiteSpace: 'pre-wrap' }}>
                 <div style={{ color: 'gray', marginBottom: '8px', fontSize: '12px', borderBottom: '1px solid #333', paddingBottom: '4px' }}>Console Output:</div>
