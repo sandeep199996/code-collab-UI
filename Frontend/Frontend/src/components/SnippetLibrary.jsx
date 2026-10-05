@@ -6,7 +6,7 @@ const SnippetLibrary = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    const token = localStorage.getItem('mentor_jwt');
+    const token = sessionStorage.getItem('mentor_jwt');
 
     const fetchSnippets = async () => {
         setLoading(true);

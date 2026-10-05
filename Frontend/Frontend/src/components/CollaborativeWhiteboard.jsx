@@ -113,7 +113,26 @@ const CollaborativeWhiteboard = ({ stompClient, roomId, currentUserEmail }) => {
     };
 
     const colors = ['#39FF14', '#E0B0FF', '#40E0D0', '#FFD700', '#FF073A', '#FFFFFF'];
+const handleDownload = () => {
+        const canvas = canvasRef.current;
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = canvas.width;
+        exportCanvas.height = canvas.height;
+        const ctx = exportCanvas.getContext('2d');
 
+
+        ctx.fillStyle = '#050100';
+        ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+
+        ctx.drawImage(canvas, 0, 0);
+
+
+        const link = document.createElement('a');
+        link.download = `architecture-session-${roomId}.png`;
+        link.href = exportCanvas.toDataURL('image/png');
+        link.click();
+    };
     return (
         <div style={{ width: '100%', height: '100%', backgroundColor: '#050100', display: 'flex', flexDirection: 'column' }}>
 
@@ -159,6 +178,12 @@ const CollaborativeWhiteboard = ({ stompClient, roomId, currentUserEmail }) => {
                 >
                     🗑️ Clear Board
                 </button>
+                <button
+                                    onClick={handleDownload}
+                                    style={{ padding: '5px 10px', backgroundColor: '#40E0D0', color: 'black', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                                >
+                                    📸 Save Image
+                                </button>
             </div>
 
             {/* CANVAS AREA */}

@@ -18,7 +18,7 @@ const UserList = ({ onSessionStart, onSessionEnd ,activeRoomId}) => {
 
     const stompClientRef = useRef(null);
 
-    const token = localStorage.getItem('mentor_jwt');
+    const token = sessionStorage.getItem('mentor_jwt');
     const currentUserEmail = token ? JSON.parse(atob(token.split('.')[1])).sub : '';
 
     // --- 1. THE DATABASE EFFECT (Runs when page changes or search is triggered) ---
@@ -218,7 +218,7 @@ const UserList = ({ onSessionStart, onSessionEnd ,activeRoomId}) => {
                     <p style={{ color: 'gray', fontStyle: 'italic' }}>No users found.</p>
                 ) : (
                     users.map(user => {
-                        const isConnectedToMe = connectedUser === user.email;
+                        const isConnectedToMe = activeRoomId ? activeRoomId.includes(user.email) : false;
                         const isBusy = userStatuses[user.email] === 'BUSY';
                         const isOffline = userStatuses[user.email] === 'OFFLINE' || !userStatuses[user.email];
 

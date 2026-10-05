@@ -16,7 +16,7 @@ const Login = ({ onLoginSuccess }) => {
         .then(response => {
             // 1. The response.data IS our long JWT string! Let's put it in the backpack.
             const token = response.data;
-            localStorage.setItem('mentor_jwt', token);
+            sessionStorage.setItem('mentor_jwt', token);
 
             // 2. Tell the parent app we succeeded
             onLoginSuccess();

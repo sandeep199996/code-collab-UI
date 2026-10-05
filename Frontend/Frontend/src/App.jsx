@@ -18,14 +18,16 @@ import SoloWorkspace from './components/SoloWorkspace';
 import ChallengeStudio from './components/ChallengeStudio';
 function App() {
 
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('mentor_jwt'));
+  const [isLoggedIn, setIsLoggedIn] = useState(!!sessionStorage.getItem('mentor_jwt'));//changed from localStorage to sessionStorage for better security
   const [showRegister, setShowRegister] = useState(false);
-  const [activeRoomId, setActiveRoomId] = useState(null);
+  const [activeRoomId, setActiveRoomId] = useState(() => {
+      return sessionStorage.getItem('activeRoomId') || null;
+  });
 
 
 
  // --- BULLETPROOF JWT DECODER ---
-   const jwt = localStorage.getItem('mentor_jwt');
+   const jwt = sessionStorage.getItem('mentor_jwt');//changed from localStorage to sessionStorage for better security
    let decodedToken = null;
 
    try {
@@ -53,7 +55,7 @@ function App() {
 useEffect(() => {
        if (isLoggedIn && userEmail) {
            axios.get('http://localhost:8080/api/messages/unread', {
-               headers: { 'Authorization': `Bearer ${localStorage.getItem('mentor_jwt')}` }
+               headers: { 'Authorization': `Bearer ${sessionStorage.getItem('mentor_jwt')}` }
            })
            .then(res => setUnreadCount(res.data))
            .catch(err => console.error("Failed to fetch unread count"));
@@ -82,14 +84,15 @@ useEffect(() => {
    }, [isLoggedIn, userEmail, currentView]);
 
   const handleLogout = () => {
-    localStorage.removeItem('mentor_jwt');
+    sessionStorage.removeItem('mentor_jwt');
+    sessionStorage.removeItem('activeRoomId');
     setIsLoggedIn(false);
     setActiveRoomId(null);
     setShowProfileMenu(false);
   };
   const handleAccountDeleted = () => {
 
-        localStorage.removeItem('mentor_jwt');
+        sessionStorage.removeItem('mentor_jwt');
 
         setIsLoggedIn(false);
         setShowProfileMenu(false);
@@ -99,7 +102,7 @@ useEffect(() => {
   useEffect(() => {
       if (isLoggedIn && userEmail) {
           axios.get('http://localhost:8080/api/messages/unread', {
-              headers: { 'Authorization': `Bearer ${localStorage.getItem('mentor_jwt')}` }
+              headers: { 'Authorization': `Bearer ${sessionStorage.getItem('mentor_jwt')}` }
           })
           .then(res => setUnreadCount(res.data))
           .catch(err => console.error("Failed to fetch unread count"));
@@ -227,6 +230,7 @@ useEffect(() => {
             userEmail={userEmail}
             onAccept={(roomId) => {
                 setActiveRoomId(roomId);
+                sessionStorage.setItem('activeRoomId', roomId);
                 setCurrentView('DIRECTORY');
             }}
         />
@@ -248,11 +252,11 @@ useEffect(() => {
                                                                                 ) :(
                   <>
                       {/* The Switchboard */}
-                    <UserList activeRoomId={activeRoomId} onSessionStart={(roomId) => setActiveRoomId(roomId)} onSessionEnd={() => setActiveRoomId(null)} />
+                    <UserList activeRoomId={activeRoomId} onSessionStart={(roomId) => {setActiveRoomId(roomId); sessionStorage.setItem('activeRoomId', roomId)}} onSessionEnd={() =>{ setActiveRoomId(null); sessionStorage.removeItem('activeRoomId')}} />
                       <hr style={{ margin: '30px 0', borderColor: '#333' }} />
 
                       {/* Locked-down components */}
-                      <VideoCall activeRoomId={activeRoomId} onSessionEnd={() => setActiveRoomId(null)} />
+                      <VideoCall activeRoomId={activeRoomId} onSessionEnd={() =>{ setActiveRoomId(null);sessionStorage.removeItem('activeRoomId')}} />
                       <hr style={{ margin: '30px 0', borderColor: '#333' }} />
                       <CodeWorkspace activeRoomId={activeRoomId} />
                       <hr style={{ margin: '30px 0', borderColor: '#333' }} />

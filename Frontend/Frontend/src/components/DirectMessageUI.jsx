@@ -10,7 +10,7 @@ const DirectMessageUI = ({ currentUserEmail }) => {
     const [messageInput, setMessageInput] = useState('');
     const stompClientRef = useRef(null);
     const messagesEndRef = useRef(null);
-    const token = localStorage.getItem('mentor_jwt');
+    const token = sessionStorage.getItem('mentor_jwt');// changed
     const [unreadMap, setUnreadMap] = useState({});
 
    // 1. Fetch Directory AND Unread Map on Load

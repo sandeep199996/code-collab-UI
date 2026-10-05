@@ -9,7 +9,7 @@ const SoloWorkspace = () => {
     const [output, setOutput] = useState('');
     const [language, setLanguage] = useState('javascript');
 
-    const token = localStorage.getItem('mentor_jwt');
+    const token = sessionStorage.getItem('mentor_jwt');
 
     // 1. Fetch available challenges for this user
     useEffect(() => {

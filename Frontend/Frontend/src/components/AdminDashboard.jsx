@@ -12,7 +12,7 @@ const AdminDashboard = () => {
         const [isLaunching, setIsLaunching] = useState(false);
 const [activeRooms, setActiveRooms] = useState([]);
 
-    const token = localStorage.getItem('mentor_jwt');
+    const token = sessionStorage.getItem('mentor_jwt');
 
     const handleLaunchClassroom = async () => {
             if (!classroomTopic || !mentorEmail || !menteeEmails) {

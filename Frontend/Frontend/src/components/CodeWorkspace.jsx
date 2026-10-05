@@ -24,7 +24,7 @@ const CodeWorkspace = ({ activeRoomId }) => {
     const [isCompiling, setIsCompiling] = useState(false);
 const [activeTab, setActiveTab] = useState('CODE');
     const stompClientRef = useRef(null);
-    const token = localStorage.getItem('mentor_jwt');
+    const token = sessionStorage.getItem('mentor_jwt');
     const userEmail = token ? JSON.parse(atob(token.split('.')[1])).sub : 'Anonymous';
 // To Fetch available coding challenges on load
     useEffect(() => {
@@ -110,7 +110,7 @@ const handleSaveSnippet = async () => {
     }
 
     setIsSaving(true);
-    const token = localStorage.getItem('mentor_jwt');
+    const token = sessionStorage.getItem('mentor_jwt');
 
     try {
         await axios.post('http://localhost:8080/api/snippets', {

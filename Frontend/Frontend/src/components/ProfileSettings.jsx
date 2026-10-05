@@ -6,7 +6,7 @@ const ProfileSettings = ({ userEmail, onAccountDeleted }) => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState('');
 
-    const token = localStorage.getItem('mentor_jwt');
+    const token = sessionStorage.getItem('mentor_jwt');
 
     const handleDelete = async () => {
         if (confirmText !== 'DELETE') {

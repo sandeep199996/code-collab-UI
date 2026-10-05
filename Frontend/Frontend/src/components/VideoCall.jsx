@@ -18,7 +18,7 @@ const VideoCall = ({ activeRoomId, onSessionEnd }) => {
     const [isVideoOff, setIsVideoOff] = useState(false);
     const [isScreenSharing, setIsScreenSharing] = useState(false);
 
-    const token = localStorage.getItem('mentor_jwt');
+    const token = sessionStorage.getItem('mentor_jwt');
     const userEmail = token ? JSON.parse(atob(token.split('.')[1])).sub : 'Anonymous';
 
     const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };

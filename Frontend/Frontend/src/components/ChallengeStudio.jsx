@@ -12,7 +12,7 @@ const ChallengeStudio = () => {
     const [testCases, setTestCases] = useState('[{"input": "", "expected": ""}]');
 
     const [isSaving, setIsSaving] = useState(false);
-    const token = localStorage.getItem('mentor_jwt');
+    const token = sessionStorage.getItem('mentor_jwt');//changed
 
 
     const fetchMyChallenges = async () => {

@@ -9,7 +9,7 @@ const Chat = ({ activeRoomId }) => {
 
     const stompClientRef = useRef(null);
 
-    const token = localStorage.getItem('mentor_jwt');
+    const token = sessionStorage.getItem('mentor_jwt');
     const userEmail = token ? JSON.parse(atob(token.split('.')[1])).sub : 'Anonymous';
 
     useEffect(() => {
