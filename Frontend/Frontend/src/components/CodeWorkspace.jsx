@@ -19,7 +19,9 @@ const CodeWorkspace = ({ activeRoomId }) => {
     const [selectedChallengeId, setSelectedChallengeId] = useState('');
     const [activePrompt, setActivePrompt] = useState(null);
     const [language, setLanguage] = useState('java');
-    const [code, setCode] = useState(templates.java);
+   const [code, setCode] = useState(() => {
+           return sessionStorage.getItem(`code_${activeRoomId}`) || templates[language] || '';
+       });
     const [output, setOutput] = useState('');
     const [isCompiling, setIsCompiling] = useState(false);
 const [activeTab, setActiveTab] = useState('CODE');
@@ -34,6 +36,7 @@ const [activeTab, setActiveTab] = useState('CODE');
         .then(res => setChallenges(res.data))
         .catch(err => console.error("Failed to load challenges from mainframe.", err));
     }, []);
+
     useEffect(() => {
         if (!activeRoomId) {
             setCode(templates[language]);
@@ -129,6 +132,12 @@ const handleSaveSnippet = async () => {
         setIsSaving(false);
     }
 };
+useEffect(() => {
+        if (activeRoomId && code) {
+            sessionStorage.setItem(`code_${activeRoomId}`, code);
+        }
+    }, [code, activeRoomId]);
+
 const handlePushChallenge = () => {
         const challenge = challenges.find(c => c.id === parseInt(selectedChallengeId));
         if (!challenge) return;

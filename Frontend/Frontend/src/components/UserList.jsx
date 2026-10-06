@@ -74,9 +74,18 @@ const UserList = ({ onSessionStart, onSessionEnd ,activeRoomId}) => {
         const socket = new SockJS('http://localhost:8080/ws');
         const client = new Client({
             webSocketFactory: () => socket,
+            connectHeaders: {
+                            userEmail: currentUserEmail
+                        },
             onConnect: () => {
                 client.subscribe('/topic/presence', (message) => {
                     setUserStatuses(JSON.parse(message.body));
+                    if (payload.email && payload.status) {
+                                            setUserStatuses(prev => ({ ...prev, [payload.email]: payload.status }));
+                                        } else {
+
+                                            setUserStatuses(prev => ({ ...prev, ...payload }));
+                                        }
                 });
 
                 client.subscribe(`/topic/invites/${currentUserEmail}`, (message) => {
@@ -109,6 +118,28 @@ const UserList = ({ onSessionStart, onSessionEnd ,activeRoomId}) => {
     }, [currentUserEmail, token]);
 
 
+    useEffect(() => {
+        if (activeRoomId) {
+            // Figure out who the other person in the room is
+            const partnerEmail = activeRoomId.split('-room-').find(email => email !== currentUserEmail);
+            if (partnerEmail && userStatuses[partnerEmail] === 'OFFLINE') {
+
+                const disconnectTimer = setTimeout(() => {
+                    alert(`Session ended: ${partnerEmail} disconnected permanently.`);
+
+
+                    setConnectedUser(null);
+                    onSessionEnd();
+
+
+                    setTimeout(() => changeMyStatus('ONLINE'), 500);
+                }, 5000); // 5000ms = 5 seconds
+
+
+                return () => clearTimeout(disconnectTimer);
+            }
+        }
+    }, [userStatuses, activeRoomId, currentUserEmail]);
     // --- Session Handlers ---
     const changeMyStatus = (newStatus) => {
         if (stompClientRef.current) {

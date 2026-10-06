@@ -3,7 +3,10 @@ import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 
 const Chat = ({ activeRoomId }) => {
-    const [messages, setMessages] = useState([]);
+    const [messages, setMessages] = useState(() => {
+            const saved = sessionStorage.getItem(`chat_${activeRoomId}`);
+            return saved ? JSON.parse(saved) : [];
+        });
     const [messageInput, setMessageInput] = useState('');
     const [connected, setConnected] = useState(false);
 
@@ -11,7 +14,11 @@ const Chat = ({ activeRoomId }) => {
 
     const token = sessionStorage.getItem('mentor_jwt');
     const userEmail = token ? JSON.parse(atob(token.split('.')[1])).sub : 'Anonymous';
-
+useEffect(() => {
+        if (activeRoomId) {
+            sessionStorage.setItem(`chat_${activeRoomId}`, JSON.stringify(messages));
+        }
+    }, [messages, activeRoomId]);
     useEffect(() => {
         if (!activeRoomId) {
             setMessages([]);

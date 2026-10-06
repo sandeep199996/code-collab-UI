@@ -22,6 +22,13 @@ const CollaborativeWhiteboard = ({ stompClient, roomId, currentUserEmail }) => {
         canvas.height = rect.height || 500;
 
         context.lineCap = "round";
+        const savedImage = sessionStorage.getItem(`whiteboard_${roomId}`);
+                if (savedImage) {
+                    const img = new Image();
+                    img.src = savedImage;
+                    // Draws the saved image back onto the canvas once it loads
+                    img.onload = () => context.drawImage(img, 0, 0);
+                }
         contextRef.current = context;
 
         const handleResize = () => {
@@ -95,7 +102,11 @@ const CollaborativeWhiteboard = ({ stompClient, roomId, currentUserEmail }) => {
         setIsDrawing(true);
     };
 
-    const onMouseUp = () => setIsDrawing(false);
+    const onMouseUp = () => {setIsDrawing(false);
+        if (roomId) {
+                    sessionStorage.setItem(`whiteboard_${roomId}`, canvasRef.current.toDataURL());
+                }
+            };
 
     const onMouseMove = (e) => {
         if (!isDrawing) return;
